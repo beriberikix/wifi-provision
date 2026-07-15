@@ -14,6 +14,10 @@ description: |
 grade: stable
 confinement: strict
 
+platforms:
+  amd64:
+  arm64:
+
 apps:
   wifi-provision:
     command: bin/wifi-provision
