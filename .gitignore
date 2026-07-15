@@ -1,0 +1,6 @@
+/wifi-provision
+/dist/
+*.snap
+/parts/
+/prime/
+/stage/

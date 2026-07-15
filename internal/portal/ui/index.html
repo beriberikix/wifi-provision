@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WiFi Setup</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="card">
+      <h1>Connect to WiFi</h1>
+      <p id="intro">Choose a network and enter its password to connect this device.</p>
+
+      <form id="connect-form" autocomplete="off">
+        <label for="ssid">Network</label>
+        <div class="row">
+          <select id="ssid" name="ssid" required></select>
+          <button type="button" id="refresh" title="Rescan">&#x21bb;</button>
+        </div>
+
+        <div id="identity-field" hidden>
+          <label for="identity">Username</label>
+          <input id="identity" name="identity" type="text" autocomplete="off" />
+        </div>
+
+        <label for="passphrase" id="passphrase-label">Password</label>
+        <input id="passphrase" name="passphrase" type="password" autocomplete="off" />
+
+        <button type="submit" id="submit">Connect</button>
+      </form>
+
+      <p id="status" role="status" aria-live="polite"></p>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,93 @@
+:root {
+  --bg: #f4f5f7;
+  --card: #ffffff;
+  --fg: #1b2733;
+  --muted: #64778a;
+  --accent: #2a7de1;
+  --accent-fg: #ffffff;
+  --border: #d3dae2;
+  --err: #c0392b;
+  --ok: #1e824c;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  padding: 1rem;
+}
+
+.card {
+  background: var(--card);
+  width: 100%;
+  max-width: 26rem;
+  padding: 1.75rem;
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(27, 39, 51, 0.08);
+}
+
+h1 { margin: 0 0 0.25rem; font-size: 1.5rem; }
+#intro { margin: 0 0 1.25rem; color: var(--muted); font-size: 0.95rem; }
+
+label { display: block; margin: 0.75rem 0 0.25rem; font-weight: 600; font-size: 0.9rem; }
+
+select, input {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #fff;
+  color: var(--fg);
+}
+
+.row { display: flex; gap: 0.5rem; }
+.row select { flex: 1; }
+
+#refresh {
+  flex: 0 0 auto;
+  width: 2.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+button#submit {
+  width: 100%;
+  margin-top: 1.25rem;
+  padding: 0.7rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button#submit:disabled { opacity: 0.6; cursor: default; }
+
+#status { margin: 1rem 0 0; min-height: 1.25rem; font-size: 0.95rem; }
+#status.error { color: var(--err); }
+#status.ok { color: var(--ok); }
+#status.busy { color: var(--muted); }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #10171e;
+    --card: #1b2733;
+    --fg: #e7edf3;
+    --muted: #93a4b5;
+    --border: #33475b;
+  }
+  select, input, #refresh { background: #12202c; color: var(--fg); }
+}

@@ -1,0 +1,47 @@
+name: wifi-provision
+base: core24
+version: "0.1.0"
+summary: Captive-portal WiFi onboarding for Ubuntu Core
+description: |
+  wifi-provision hosts a WiFi access point with a captive portal so a phone or
+  laptop can configure a headless device's WiFi. It scans nearby networks via
+  wpa_supplicant, hosts the portal AP with hostapd + dnsmasq (both bundled), and
+  joins the chosen network by writing netplan config and running `netplan apply`.
+
+  Designed for default Ubuntu Core (netplan + systemd-networkd + wpa_supplicant) —
+  no NetworkManager required.
+
+grade: stable
+confinement: strict
+
+apps:
+  wifi-provision:
+    command: bin/wifi-provision
+    daemon: simple
+    install-mode: disable
+    # hostapd/dnsmasq are staged into the snap; expose them on PATH for the binary.
+    environment:
+      PATH: $SNAP/usr/sbin:$SNAP/sbin:$SNAP/usr/bin:$SNAP/bin:$PATH
+    plugs:
+      - network
+      - network-bind
+      - network-control
+      - network-setup-control
+      - firewall-control
+
+parts:
+  wifi-provision:
+    plugin: go
+    source: .
+    build-snaps:
+      - go/1.26/stable
+    organize:
+      bin/wifi-provision: bin/wifi-provision
+
+  # Bundle the AP tooling so the snap works on a stock Core image.
+  ap-tools:
+    plugin: nil
+    stage-packages:
+      - hostapd
+      - dnsmasq-base
+      - iproute2
