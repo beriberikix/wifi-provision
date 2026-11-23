@@ -3,11 +3,29 @@ package backend
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 )
+
+// RestoreNetworking hands the radio back to the host's own networking after we
+// exit without connecting (timeout, signal, error). If StartAP terminated a
+// pre-existing wpa_supplicant, `netplan apply` brings it back; otherwise there is
+// nothing to restore.
+func (c *CoreBackend) RestoreNetworking(ctx context.Context) error {
+	c.mu.Lock()
+	released := c.releasedSupplicant
+	c.mu.Unlock()
+	if !released {
+		return nil
+	}
+	if err := run(ctx, "netplan", "apply"); err != nil {
+		return fmt.Errorf("restoring networking: %w", err)
+	}
+	return nil
+}
 
 // apProcess bundles the running hostapd and dnsmasq children plus the temp files
 // backing them, so StopAP can tear everything down cleanly.
@@ -22,8 +40,25 @@ type apProcess struct {
 // wildcard-DNS captive-portal trick. The interface must first be free of
 // wpa_supplicant's client role (handled by the orchestrator before StartAP).
 func (c *CoreBackend) StartAP(ctx context.Context, cfg APConfig) error {
+	// Scan while the radio is still free, so the portal has a network list to
+	// serve while the AP occupies it. A failed scan is not fatal: the user can
+	// still type an SSID, and a later retry (restartAP) rescans.
+	if _, err := c.Scan(ctx); err != nil {
+		log.Printf("pre-AP scan failed: %v", err)
+	}
+
+	// Stop any wpa_supplicant on the interface; otherwise it keeps pulling the
+	// radio back into station mode and the AP never actually broadcasts.
+	released, err := c.releaseSupplicant()
+	if err != nil {
+		return err
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if released {
+		c.releasedSupplicant = true
+	}
 	if c.ap != nil {
 		return fmt.Errorf("access point already running")
 	}

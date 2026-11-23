@@ -16,8 +16,14 @@ type CoreBackend struct {
 	wpaCtrlDir  string // dir holding per-interface wpa_supplicant control sockets
 	netplanFile string // path of the netplan drop-in we own
 
-	mu sync.Mutex
-	ap *apProcess // non-nil while the portal AP is up
+	mu     sync.Mutex
+	ap     *apProcess // non-nil while the portal AP is up
+	cached []Network  // last live scan; served while the AP is up
+
+	// releasedSupplicant records that StartAP terminated a pre-existing
+	// wpa_supplicant (e.g. netplan's), so RestoreNetworking knows to bring the
+	// host's own networking back if we exit without connecting.
+	releasedSupplicant bool
 }
 
 // Options configure a CoreBackend. Zero values fall back to sensible defaults.

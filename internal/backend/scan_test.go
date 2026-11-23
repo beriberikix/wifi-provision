@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"context"
 	"reflect"
 	"testing"
 )
@@ -51,5 +52,36 @@ func TestParseScanResultsEmpty(t *testing.T) {
 	}
 	if got == nil {
 		t.Error("expected non-nil empty slice")
+	}
+}
+
+// While the AP is up the radio can't scan, so Scan must serve the pre-AP cache
+// without touching wpa_supplicant (the control dir here doesn't exist).
+func TestScanServesCacheWhileAPUp(t *testing.T) {
+	want := []Network{{SSID: "home", Security: SecurityWPA}}
+	c := &CoreBackend{iface: "wlan0", wpaCtrlDir: t.TempDir() + "/missing", ap: &apProcess{}, cached: want}
+
+	got, err := c.Scan(context.Background())
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+	if len(got) != 1 || got[0] != want[0] {
+		t.Fatalf("Scan = %v, want %v", got, want)
+	}
+
+	c.cached = nil
+	got, err = c.Scan(context.Background())
+	if err != nil || got == nil || len(got) != 0 {
+		t.Fatalf("Scan with empty cache = %v, %v; want empty non-nil list", got, err)
+	}
+}
+
+func TestClassifyForPrefersCache(t *testing.T) {
+	c := &CoreBackend{cached: []Network{{SSID: "corp", Security: SecurityEnterprise}}}
+	if got := c.classifyFor(Creds{SSID: "corp", Passphrase: "x"}).Security; got != SecurityEnterprise {
+		t.Fatalf("classifyFor(corp) = %q, want enterprise", got)
+	}
+	if got := c.classifyFor(Creds{SSID: "other", Passphrase: "x"}).Security; got != SecurityWPA {
+		t.Fatalf("classifyFor(other) = %q, want wpa", got)
 	}
 }

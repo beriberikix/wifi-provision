@@ -15,7 +15,7 @@
         <label for="ssid">Network</label>
         <div class="row">
           <select id="ssid" name="ssid" required></select>
-          <button type="button" id="refresh" title="Rescan">&#x21bb;</button>
+          <button type="button" id="refresh" class="side-btn" title="Rescan">&#x21bb;</button>
         </div>
 
         <div id="identity-field" hidden>
@@ -24,7 +24,12 @@
         </div>
 
         <label for="passphrase" id="passphrase-label">Password</label>
-        <input id="passphrase" name="passphrase" type="password" autocomplete="off" />
+        <div class="row" id="passphrase-field">
+          <input id="passphrase" name="passphrase" type="password" autocomplete="off"
+                 autocapitalize="off" autocorrect="off" spellcheck="false" />
+          <button type="button" id="toggle-pass" class="side-btn" aria-controls="passphrase"
+                  aria-pressed="false" aria-label="Show password">Show</button>
+        </div>
 
         <button type="submit" id="submit">Connect</button>
       </form>
