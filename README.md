@@ -178,4 +178,6 @@ use a fake and an alternate backend (e.g. NetworkManager) could be added later.
 
 ## License
 
-TBD.
+Apache License 2.0 — see [LICENSE](LICENSE).
+
+Maintainer: Jonathan Beri <jmberi@gmail.com>

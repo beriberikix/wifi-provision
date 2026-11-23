@@ -12,6 +12,12 @@ description: |
   Designed for default Ubuntu Core (netplan + systemd-networkd + wpa_supplicant) —
   no NetworkManager required.
 
+license: Apache-2.0
+contact: Jonathan Beri <jmberi@gmail.com>
+source-code: https://github.com/beriberikix/wifi-provision
+issues: https://github.com/beriberikix/wifi-provision/issues
+website: https://github.com/beriberikix/wifi-provision
+
 grade: stable
 confinement: strict
 
@@ -63,3 +69,5 @@ parts:
       - hostapd
       - dnsmasq-base
       - iproute2
+    prime:
+      - -usr/lib/*/tc
