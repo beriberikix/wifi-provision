@@ -18,7 +18,7 @@ dependency on NetworkManager makes it unusable on a stock Ubuntu Core image.
 | Platform | Hardware | How | Result |
 |---|---|---|---|
 | Ubuntu Server 26.10 (arm64) | Raspberry Pi 4 | binary + apt `hostapd`/`dnsmasq-base` | Full flow from a phone; survives reboot |
-| Ubuntu Server 26.10 (arm64) | Raspberry Pi 4 | strict snap (core24) | Full flow, no AppArmor denials |
+| Ubuntu Server 26.10 (arm64) | Raspberry Pi 4 | strict snap (core24) | Full flow from a phone (fresh device), no AppArmor denials |
 
 Ubuntu Core uses the same stack and the same snap, but hasn't yet been tested on
 real hardware.
