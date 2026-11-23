@@ -31,9 +31,64 @@ func (c *CoreBackend) RestoreNetworking(ctx context.Context) error {
 // apProcess bundles the running hostapd and dnsmasq children plus the temp files
 // backing them, so StopAP can tear everything down cleanly.
 type apProcess struct {
-	hostapd     *exec.Cmd
-	dnsmasq     *exec.Cmd
+	iface       string
+	hostapd     *child
+	dnsmasq     *child
 	hostapdConf string
+}
+
+// child is a supervised subprocess whose exit we can observe without racing
+// a second Wait.
+type child struct {
+	name string
+	cmd  *exec.Cmd
+	done chan struct{}
+	err  error // valid once done is closed
+}
+
+func startChild(name string, cmd *exec.Cmd) (*child, error) {
+	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("starting %s: %w", name, err)
+	}
+	c := &child{name: name, cmd: cmd, done: make(chan struct{})}
+	go func() {
+		c.err = c.cmd.Wait()
+		close(c.done)
+	}()
+	return c, nil
+}
+
+func (c *child) stop() {
+	if c == nil {
+		return
+	}
+	_ = c.cmd.Process.Kill()
+	<-c.done
+}
+
+// apStartupGrace is how long hostapd and dnsmasq must stay up before StartAP
+// reports success. Both fail fast on bad config, a busy radio or a sandbox
+// denial; without this check the portal would look up while phones get no
+// beacon or no DHCP lease.
+var apStartupGrace = 2 * time.Second
+
+// waitStable returns an error if any child exits within grace.
+func waitStable(grace time.Duration, children ...*child) error {
+	deadline := time.Now().Add(grace)
+	for {
+		for _, c := range children {
+			select {
+			case <-c.done:
+				return fmt.Errorf("%s exited during startup: %v (see its log above)", c.name, c.err)
+			default:
+			}
+		}
+		if time.Now().After(deadline) {
+			return nil
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 }
 
 // StartAP brings the interface into AP mode: it assigns the gateway IP, writes a
@@ -88,40 +143,28 @@ func (c *CoreBackend) StartAP(ctx context.Context, cfg APConfig) error {
 		return err
 	}
 
-	hostapd := exec.CommandContext(ctx, "hostapd", confPath)
-	hostapd.Stdout, hostapd.Stderr = os.Stdout, os.Stderr
-	if err := hostapd.Start(); err != nil {
+	hostapd, err := startChild("hostapd", exec.CommandContext(ctx, "hostapd", confPath))
+	if err != nil {
 		_ = os.Remove(confPath)
-		return fmt.Errorf("starting hostapd: %w", err)
+		return err
 	}
 
-	dnsmasq := exec.CommandContext(ctx, "dnsmasq",
-		"--keep-in-foreground",
-		// The default lease file (/var/lib/misc) is read-only under snap
-		// confinement and dnsmasq treats that as fatal; leases are throwaway.
-		"--dhcp-leasefile="+filepath.Join(os.TempDir(), "wifi-provision-dnsmasq.leases"),
-		"--pid-file=", // no pid file: we supervise the process directly
-		"--no-resolv",
-		"--no-hosts",
-		"--bind-interfaces",
-		"--interface="+iface,
-		"--except-interface=lo",
-		"--dhcp-range="+cfg.DHCPRange,
-		"--dhcp-option=option:router,"+cfg.Gateway,
-		"--dhcp-option=option:dns-server,"+cfg.Gateway,
-		// Wildcard DNS: resolve every name to the gateway to trigger captive-portal
-		// detection and funnel all requests to the portal.
-		"--address=/#/"+cfg.Gateway,
-	)
-	dnsmasq.Stdout, dnsmasq.Stderr = os.Stdout, os.Stderr
-	if err := dnsmasq.Start(); err != nil {
-		_ = hostapd.Process.Kill()
-		_, _ = hostapd.Process.Wait()
+	dnsmasq, err := startChild("dnsmasq", exec.CommandContext(ctx, "dnsmasq", dnsmasqArgs(iface, cfg)...))
+	if err != nil {
+		hostapd.stop()
 		_ = os.Remove(confPath)
-		return fmt.Errorf("starting dnsmasq: %w", err)
+		return err
 	}
 
-	c.ap = &apProcess{hostapd: hostapd, dnsmasq: dnsmasq, hostapdConf: confPath}
+	if err := waitStable(apStartupGrace, hostapd, dnsmasq); err != nil {
+		dnsmasq.stop()
+		hostapd.stop()
+		_ = os.Remove(confPath)
+		_ = run(ctx, "ip", "addr", "flush", "dev", iface)
+		return err
+	}
+
+	c.ap = &apProcess{iface: iface, hostapd: hostapd, dnsmasq: dnsmasq, hostapdConf: confPath}
 	return nil
 }
 
@@ -136,19 +179,46 @@ func (c *CoreBackend) StopAP(ctx context.Context) error {
 		return nil
 	}
 
-	for _, cmd := range []*exec.Cmd{ap.dnsmasq, ap.hostapd} {
-		if cmd == nil || cmd.Process == nil {
-			continue
-		}
-		_ = cmd.Process.Kill()
-		_, _ = cmd.Process.Wait()
-	}
+	ap.dnsmasq.stop()
+	ap.hostapd.stop()
 	if ap.hostapdConf != "" {
 		_ = os.Remove(ap.hostapdConf)
 	}
+	// Drop the portal gateway address; otherwise it lingers on an interface
+	// nothing else manages (e.g. a fresh device with no WiFi netplan config).
+	_ = run(ctx, "ip", "addr", "flush", "dev", ap.iface)
 	// Give the driver a moment to leave AP mode before a subsequent scan/connect.
 	time.Sleep(1 * time.Second)
 	return nil
+}
+
+// dnsmasqArgs builds the dnsmasq command line for the portal AP.
+func dnsmasqArgs(iface string, cfg APConfig) []string {
+	args := []string{
+		"--keep-in-foreground",
+		// The default lease file (/var/lib/misc) is read-only under snap
+		// confinement and dnsmasq treats that as fatal; leases are throwaway.
+		"--dhcp-leasefile=" + filepath.Join(os.TempDir(), "wifi-provision-dnsmasq.leases"),
+		"--pid-file=", // no pid file: we supervise the process directly
+		"--no-resolv",
+		"--no-hosts",
+		"--bind-interfaces",
+		"--interface=" + iface,
+		"--except-interface=lo",
+		"--dhcp-range=" + cfg.DHCPRange,
+		"--dhcp-option=option:router," + cfg.Gateway,
+		"--dhcp-option=option:dns-server," + cfg.Gateway,
+		// Wildcard DNS: resolve every name to the gateway to trigger captive-portal
+		// detection and funnel all requests to the portal.
+		"--address=/#/" + cfg.Gateway,
+	}
+	if os.Getenv("SNAP") != "" {
+		// dnsmasq normally drops to nobody:dip, but snapd's seccomp filter
+		// denies setgroups() and switching to non-root IDs, which dnsmasq treats
+		// as fatal. Stay root; the snap's AppArmor profile is the sandbox.
+		args = append(args, "--user=root", "--group=")
+	}
+	return args
 }
 
 // writeHostapdConf writes a minimal hostapd config to a temp file and returns its
