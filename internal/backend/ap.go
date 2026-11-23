@@ -78,7 +78,7 @@ func (c *CoreBackend) StartAP(ctx context.Context, cfg APConfig) error {
 		return fmt.Errorf("bringing up %s: %w", iface, err)
 	}
 
-	confPath, err := writeHostapdConf(iface, cfg)
+	confPath, err := writeHostapdConf(iface, cfg, c.country)
 	if err != nil {
 		return err
 	}
@@ -144,13 +144,18 @@ func (c *CoreBackend) StopAP(ctx context.Context) error {
 
 // writeHostapdConf writes a minimal hostapd config to a temp file and returns its
 // path. An empty passphrase yields an open AP; otherwise WPA2-PSK.
-func writeHostapdConf(iface string, cfg APConfig) (string, error) {
+func writeHostapdConf(iface string, cfg APConfig, country string) (string, error) {
 	var b strings.Builder
 	fmt.Fprintf(&b, "interface=%s\n", iface)
 	fmt.Fprintf(&b, "ssid=%s\n", cfg.SSID)
 	b.WriteString("driver=nl80211\n")
 	b.WriteString("hw_mode=g\n")
 	b.WriteString("channel=6\n")
+	if country != "" {
+		// Sets the regulatory domain and advertises it (802.11d) to clients.
+		fmt.Fprintf(&b, "country_code=%s\n", country)
+		b.WriteString("ieee80211d=1\n")
+	}
 	if cfg.Passphrase != "" {
 		b.WriteString("wpa=2\n")
 		fmt.Fprintf(&b, "wpa_passphrase=%s\n", cfg.Passphrase)

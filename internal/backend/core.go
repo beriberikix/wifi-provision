@@ -15,6 +15,12 @@ type CoreBackend struct {
 	iface       string // resolved wireless interface, e.g. "wlan0"
 	wpaCtrlDir  string // dir holding per-interface wpa_supplicant control sockets
 	netplanFile string // path of the netplan drop-in we own
+	country     string // regulatory domain for hostapd and netplan; may be empty
+
+	// prevNetplan holds our drop-in as it was before the last Connect, so a join
+	// that fails can be reverted instead of leaving bad credentials in place.
+	prevNetplan       []byte
+	prevNetplanExists bool
 
 	mu     sync.Mutex
 	ap     *apProcess // non-nil while the portal AP is up
@@ -31,6 +37,7 @@ type Options struct {
 	Interface   string // if empty, auto-detect the first wireless interface
 	WPACtrlDir  string // default: /run/wpa_supplicant
 	NetplanFile string // default: /etc/netplan/90-wifi-provision.yaml
+	Country     string // ISO 3166-1 alpha-2 regulatory domain; empty = leave as is
 }
 
 const (
@@ -62,6 +69,7 @@ func NewCore(opts Options) (*CoreBackend, error) {
 		iface:       iface,
 		wpaCtrlDir:  dir,
 		netplanFile: npFile,
+		country:     opts.Country,
 	}, nil
 }
 

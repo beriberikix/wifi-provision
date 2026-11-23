@@ -11,6 +11,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // Defaults mirror the original wifi-connect (src/config.rs).
@@ -31,6 +32,11 @@ type Config struct {
 	DHCPRange       string
 	ListeningPort   int
 	ActivityTimeout int // seconds; 0 disables
+
+	// Country is an ISO 3166-1 alpha-2 regulatory domain (e.g. "US"); empty
+	// leaves the radio's current domain alone. It is advertised by the portal AP
+	// and written to netplan, which passes it to wpa_supplicant as country=.
+	Country string
 }
 
 // Load resolves configuration from the given args (excluding the program name)
@@ -49,6 +55,7 @@ func Load(args []string, getenv func(string) string) (Config, error) {
 		dhcp    = fs.String("portal-dhcp-range", "", fmt.Sprintf("DHCP range (default: %s)", DefaultDHCPRange))
 		port    = fs.String("portal-listening-port", "", fmt.Sprintf("HTTP port (default: %d)", DefaultListeningPort))
 		timeout = fs.String("activity-timeout", "", "exit if portal unused for N seconds (default: 0, disabled)")
+		country = fs.String("country", "", "WiFi regulatory domain, ISO 3166-1 alpha-2 such as US (default: unset)")
 	)
 	// Short aliases matching the original tool.
 	fs.StringVar(iface, "i", "", "alias for --portal-interface")
@@ -58,6 +65,7 @@ func Load(args []string, getenv func(string) string) (Config, error) {
 	fs.StringVar(dhcp, "d", "", "alias for --portal-dhcp-range")
 	fs.StringVar(port, "o", "", "alias for --portal-listening-port")
 	fs.StringVar(timeout, "a", "", "alias for --activity-timeout")
+	fs.StringVar(country, "c", "", "alias for --country")
 
 	if err := fs.Parse(args); err != nil {
 		return Config{}, err
@@ -79,6 +87,10 @@ func Load(args []string, getenv func(string) string) (Config, error) {
 		Passphrase: pick(*pass, "PORTAL_PASSPHRASE", ""),
 		Gateway:    pick(*gateway, "PORTAL_GATEWAY", DefaultGateway),
 		DHCPRange:  pick(*dhcp, "PORTAL_DHCP_RANGE", DefaultDHCPRange),
+		Country:    strings.ToUpper(pick(*country, "PORTAL_COUNTRY", "")),
+	}
+	if cfg.Country != "" && !isCountryCode(cfg.Country) {
+		return Config{}, fmt.Errorf("invalid country %q (want a two-letter ISO 3166-1 code such as US)", cfg.Country)
 	}
 
 	portStr := pick(*port, "PORTAL_LISTENING_PORT", strconv.Itoa(DefaultListeningPort))
@@ -100,6 +112,12 @@ func Load(args []string, getenv func(string) string) (Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// isCountryCode reports whether s is two ASCII uppercase letters. It is checked
+// because the value is written verbatim into hostapd and netplan configs.
+func isCountryCode(s string) bool {
+	return len(s) == 2 && s[0] >= 'A' && s[0] <= 'Z' && s[1] >= 'A' && s[1] <= 'Z'
 }
 
 // LoadOrExit is a convenience wrapper for main: it loads from os.Args/os.Environ

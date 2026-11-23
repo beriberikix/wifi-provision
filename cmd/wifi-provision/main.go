@@ -29,7 +29,7 @@ func main() {
 
 	cfg := config.LoadOrExit()
 
-	b, err := backend.NewCore(backend.Options{Interface: cfg.Interface})
+	b, err := backend.NewCore(backend.Options{Interface: cfg.Interface, Country: cfg.Country})
 	if err != nil {
 		log.Fatalf("initializing backend: %v", err)
 	}
@@ -172,6 +172,7 @@ func (a *app) onConnect(creds backend.Creds) {
 
 	if err := a.backend.Connect(ctx, creds); err != nil {
 		log.Printf("connect failed: %v; restarting portal", err)
+		a.revertConnect(ctx)
 		a.restartAP(ctx)
 		return
 	}
@@ -187,7 +188,16 @@ func (a *app) onConnect(creds backend.Creds) {
 	}
 
 	log.Printf("no connectivity after joining %q; restarting portal", creds.SSID)
+	a.revertConnect(ctx)
 	a.restartAP(ctx)
+}
+
+// revertConnect drops the config from a failed join so it isn't kept (or
+// re-applied when networking is restored on exit).
+func (a *app) revertConnect(ctx context.Context) {
+	if err := a.backend.RevertConnect(ctx); err != nil {
+		log.Printf("reverting failed join: %v", err)
+	}
 }
 
 // restartAP brings the captive portal back up after a failed attempt.

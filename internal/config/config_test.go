@@ -90,3 +90,24 @@ func TestInvalidInputs(t *testing.T) {
 		})
 	}
 }
+
+func TestCountry(t *testing.T) {
+	cfg, err := Load([]string{"--country", "us"}, func(string) string { return "" })
+	if err != nil || cfg.Country != "US" {
+		t.Fatalf("--country us = %q, %v; want US", cfg.Country, err)
+	}
+	cfg, err = Load(nil, func(k string) string {
+		if k == "PORTAL_COUNTRY" {
+			return "GB"
+		}
+		return ""
+	})
+	if err != nil || cfg.Country != "GB" {
+		t.Fatalf("PORTAL_COUNTRY=GB = %q, %v", cfg.Country, err)
+	}
+	for _, bad := range []string{"USA", "U", "1A", "U\n"} {
+		if _, err := Load([]string{"-c", bad}, func(string) string { return "" }); err == nil {
+			t.Errorf("country %q should be rejected", bad)
+		}
+	}
+}

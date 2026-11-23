@@ -70,6 +70,10 @@ type NetworkBackend interface {
 	// up to timeout. Used to decide success vs. retry after Connect.
 	Connectivity(ctx context.Context, timeoutSeconds int) (bool, error)
 
+	// RevertConnect undoes the configuration written by the last Connect after
+	// the join failed, so bad credentials are not kept or re-applied.
+	RevertConnect(ctx context.Context) error
+
 	// RestoreNetworking returns the radio to the host's own networking when the
 	// process exits without connecting (timeout, signal, error), undoing anything
 	// StartAP disabled to free the interface.

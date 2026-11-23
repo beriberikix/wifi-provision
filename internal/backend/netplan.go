@@ -12,7 +12,7 @@ import (
 // netplan is the source of truth on default Ubuntu Core; writing this file and
 // running `netplan apply` regenerates the networkd + wpa_supplicant config and
 // performs the actual client join.
-func renderNetplan(iface string, creds Creds, target Network) string {
+func renderNetplan(iface string, creds Creds, target Network, country string) string {
 	var b strings.Builder
 	b.WriteString("# Managed by wifi-provision. Do not edit by hand.\n")
 	b.WriteString("network:\n")
@@ -20,6 +20,11 @@ func renderNetplan(iface string, creds Creds, target Network) string {
 	b.WriteString("  wifis:\n")
 	fmt.Fprintf(&b, "    %s:\n", iface)
 	b.WriteString("      dhcp4: true\n")
+	if country != "" {
+		// netplan renders this both as wpa_supplicant's country= (effective on
+		// its own) and as an `iw reg set` unit (only runs if iw is installed).
+		fmt.Fprintf(&b, "      regulatory-domain: %s\n", yamlQuote(country))
+	}
 	b.WriteString("      access-points:\n")
 
 	ssid := yamlQuote(creds.SSID)

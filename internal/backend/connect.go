@@ -13,7 +13,13 @@ import (
 // networkd/wpa_supplicant to join as a client. The AP must already be stopped by
 // the orchestrator (the interface can't be in AP mode and client mode at once).
 func (c *CoreBackend) Connect(ctx context.Context, creds Creds) error {
-	content := renderNetplan(c.iface, creds, c.classifyFor(creds))
+	content := renderNetplan(c.iface, creds, c.classifyFor(creds), c.country)
+
+	// Remember what was there so RevertConnect can undo a join that fails.
+	prev, err := os.ReadFile(c.netplanFile)
+	c.mu.Lock()
+	c.prevNetplan, c.prevNetplanExists = prev, err == nil
+	c.mu.Unlock()
 
 	if err := os.MkdirAll(filepath.Dir(c.netplanFile), 0o755); err != nil {
 		return fmt.Errorf("creating netplan dir: %w", err)
@@ -25,6 +31,26 @@ func (c *CoreBackend) Connect(ctx context.Context, creds Creds) error {
 
 	if err := run(ctx, "netplan", "apply"); err != nil {
 		return fmt.Errorf("netplan apply: %w", err)
+	}
+	return nil
+}
+
+// RevertConnect restores the netplan drop-in to its state before the last
+// Connect (removing it if there was none), so failed credentials don't linger and
+// get re-applied later. It does not apply the change: the portal AP comes back up
+// next, and leaving without connecting runs RestoreNetworking, which applies.
+func (c *CoreBackend) RevertConnect(ctx context.Context) error {
+	c.mu.Lock()
+	prev, existed := c.prevNetplan, c.prevNetplanExists
+	c.mu.Unlock()
+	if existed {
+		if err := os.WriteFile(c.netplanFile, prev, 0o600); err != nil {
+			return fmt.Errorf("restoring %s: %w", c.netplanFile, err)
+		}
+		return nil
+	}
+	if err := os.Remove(c.netplanFile); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("removing %s: %w", c.netplanFile, err)
 	}
 	return nil
 }
