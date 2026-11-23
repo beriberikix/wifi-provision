@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -49,16 +50,20 @@ func (c *CoreBackend) StartAP(ctx context.Context, cfg APConfig) error {
 
 	// Stop any wpa_supplicant on the interface; otherwise it keeps pulling the
 	// radio back into station mode and the AP never actually broadcasts.
+	// Record a release even when it errors: TERMINATE may have taken effect with
+	// only the reply lost, and RestoreNetworking must still bring networking back.
 	released, err := c.releaseSupplicant()
+	if released {
+		c.mu.Lock()
+		c.releasedSupplicant = true
+		c.mu.Unlock()
+	}
 	if err != nil {
 		return err
 	}
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if released {
-		c.releasedSupplicant = true
-	}
 	if c.ap != nil {
 		return fmt.Errorf("access point already running")
 	}
@@ -92,6 +97,10 @@ func (c *CoreBackend) StartAP(ctx context.Context, cfg APConfig) error {
 
 	dnsmasq := exec.CommandContext(ctx, "dnsmasq",
 		"--keep-in-foreground",
+		// The default lease file (/var/lib/misc) is read-only under snap
+		// confinement and dnsmasq treats that as fatal; leases are throwaway.
+		"--dhcp-leasefile="+filepath.Join(os.TempDir(), "wifi-provision-dnsmasq.leases"),
+		"--pid-file=", // no pid file: we supervise the process directly
 		"--no-resolv",
 		"--no-hosts",
 		"--bind-interfaces",

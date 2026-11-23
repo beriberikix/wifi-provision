@@ -2,12 +2,14 @@ package backend
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -133,8 +135,14 @@ func (c *CoreBackend) releaseSupplicant() (bool, error) {
 	}
 	cl, err := dialWPA(sockPath)
 	if err != nil {
-		// Stale socket with nobody listening: nothing to release.
-		return false, nil
+		// Only a stale socket with nobody listening means there is nothing to
+		// release. Any other failure (e.g. a confinement denial) must stop
+		// StartAP: carrying on would start hostapd with the supplicant still
+		// fighting it for the radio.
+		if errors.Is(err, syscall.ECONNREFUSED) {
+			return false, nil
+		}
+		return false, fmt.Errorf("contacting wpa_supplicant on %s to stop it: %w", c.iface, err)
 	}
 	_, err = cl.cmd("TERMINATE")
 	cl.close()
@@ -273,18 +281,20 @@ func isSAEOnly(flags string) bool {
 }
 
 // wpaClient is a minimal wpa_supplicant control-interface client over a unix
-// datagram socket. wpa_supplicant replies to the client's bound socket, so we use
-// an autobind abstract/local address.
+// datagram socket. wpa_supplicant replies to the client's bound address, so the
+// client must bind one.
 type wpaClient struct {
-	conn      *net.UnixConn
-	localPath string
-	events    []string // unsolicited events read while waiting for a reply
+	conn   *net.UnixConn
+	events []string // unsolicited events read while waiting for a reply
 }
 
 func dialWPA(remotePath string) (*wpaClient, error) {
-	// wpa_supplicant control sockets are SOCK_DGRAM unix sockets. The client must
-	// bind its own local socket to receive replies.
-	local := filepath.Join(os.TempDir(), fmt.Sprintf("wpa_ctrl_%d_%d", os.Getpid(), time.Now().UnixNano()))
+	// Bind in the abstract namespace ("@" prefix) rather than a /tmp path, as
+	// wpa_cli does. wpa_supplicant resolves the reply address in its own mount
+	// namespace, and under snap confinement our /tmp is private: replies to a
+	// /tmp path never arrive. Abstract sockets have no filesystem path, so they
+	// work across mount namespaces and leave nothing to clean up.
+	local := fmt.Sprintf("%swpa-%d-%d", abstractPrefix(), os.Getpid(), time.Now().UnixNano())
 	laddr := &net.UnixAddr{Name: local, Net: "unixgram"}
 	raddr := &net.UnixAddr{Name: remotePath, Net: "unixgram"}
 
@@ -292,7 +302,7 @@ func dialWPA(remotePath string) (*wpaClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &wpaClient{conn: conn, localPath: local}, nil
+	return &wpaClient{conn: conn}, nil
 }
 
 func (w *wpaClient) cmd(command string) (string, error) {
@@ -364,7 +374,16 @@ func isEvent(msg string) bool {
 	return len(msg) > 2 && msg[0] == '<' && msg[1] >= '0' && msg[1] <= '9'
 }
 
+// abstractPrefix returns the abstract-socket name prefix. snapd's AppArmor
+// profile only permits binding abstract names under "@snap.<instance-name>.", so
+// use that when confined.
+func abstractPrefix() string {
+	if name := os.Getenv("SNAP_INSTANCE_NAME"); name != "" {
+		return "@snap." + name + "."
+	}
+	return "@wifi-provision-"
+}
+
 func (w *wpaClient) close() {
 	_ = w.conn.Close()
-	_ = os.Remove(w.localPath)
 }

@@ -1,0 +1,23 @@
+#!/bin/sh
+# Map `snap set wifi-provision <key>=<value>` options onto wifi-provision's
+# environment variables, then exec the binary. Unset options are left alone so
+# the binary's own defaults apply; flags passed to `snap run` still win.
+set -e
+
+opt() { # opt <snap-key> <ENV_VAR>
+	v="$(snapctl get "$1")"
+	if [ -n "$v" ]; then
+		export "$2=$v"
+	fi
+}
+
+opt interface         PORTAL_INTERFACE
+opt ssid              PORTAL_SSID
+opt passphrase        PORTAL_PASSPHRASE
+opt gateway           PORTAL_GATEWAY
+opt dhcp-range        PORTAL_DHCP_RANGE
+opt listening-port    PORTAL_LISTENING_PORT
+opt activity-timeout  ACTIVITY_TIMEOUT
+opt country           PORTAL_COUNTRY
+
+exec "$SNAP/bin/wifi-provision" "$@"

@@ -1,0 +1,24 @@
+#!/bin/sh
+# Validate options at `snap set` time so mistakes surface immediately rather
+# than as a failed service start. The binary re-validates everything.
+set -e
+
+country="$(snapctl get country)"
+if [ -n "$country" ] && ! printf '%s' "$country" | grep -Eq '^[A-Za-z]{2}$'; then
+	echo "country must be a two-letter ISO 3166-1 code such as US (got \"$country\")" >&2
+	exit 1
+fi
+
+for key in listening-port activity-timeout; do
+	v="$(snapctl get "$key")"
+	if [ -n "$v" ] && ! printf '%s' "$v" | grep -Eq '^[0-9]+$'; then
+		echo "$key must be a non-negative integer (got \"$v\")" >&2
+		exit 1
+	fi
+done
+
+passphrase="$(snapctl get passphrase)"
+if [ -n "$passphrase" ] && { [ "${#passphrase}" -lt 8 ] || [ "${#passphrase}" -gt 63 ]; }; then
+	echo "passphrase must be 8-63 characters for WPA2 (or unset for an open portal)" >&2
+	exit 1
+fi
