@@ -120,6 +120,25 @@ sudo ./wifi-provision --country US
 The apt `hostapd` service is masked by default; wifi-provision runs its own
 instance and doesn't need it enabled.
 
+### Headless Ubuntu Core test image (Raspberry Pi)
+
+A stock Ubuntu Core image needs a screen and keyboard at first boot (console-conf
+creates the login user). For headless testing, `image/build.sh` builds a Core 26
+Pi image with your SSH key seeded instead:
+
+```sh
+sudo snap install ubuntu-image --classic
+USER_NAME="Your Name" USER_USERNAME=you USER_EMAIL=you@example.com image/build.sh
+```
+
+It's Canonical's stock `ubuntu-core-26-pi-arm64` model with three changes: your
+brand, `grade: dangerous` (required to seed a user) and console-conf removed. It
+contains the stock snaps only. Signing needs a key registered to your Snap
+Store account (`snapcraft create-key` + `snapcraft register-key`; set `SNAP_KEY`
+and `BRAND_ID`). Flash `image/out/pi.img.xz` with Raspberry Pi Imager ("Use
+custom"), boot on Ethernet, SSH in, then install the snap as above. The signed
+assertions and image are written to `image/out/`, which is gitignored.
+
 ## Platform notes
 
 - **Raspberry Pi 4 and WPA3:** the Pi 4's brcmfmac driver fails SAE (WPA3)
@@ -173,6 +192,7 @@ internal/backend     NetworkBackend interface + netplan/networkd implementation
   netplan.go         netplan YAML rendering
   connect.go         netplan apply, revert on failure, connectivity check
 snap/                snapcraft.yaml, launcher (snap set → env), configure hook
+image/               headless Ubuntu Core test image (model + system-user templates)
 ```
 
 `NetworkBackend` is the seam: the portal depends only on the interface, so tests

@@ -1,0 +1,20 @@
+{
+  "type": "system-user",
+  "authority-id": "${BRAND_ID}",
+  "brand-id": "${BRAND_ID}",
+  "series": [
+    "16"
+  ],
+  "models": [
+    "${MODEL}"
+  ],
+  "name": "${USER_NAME}",
+  "username": "${USER_USERNAME}",
+  "email": "${USER_EMAIL}",
+  "ssh-keys": [
+    "${SSH_PUBKEY}"
+  ],
+  "since": "${TIMESTAMP}",
+  "until": "${UNTIL}",
+  "timestamp": "${TIMESTAMP}"
+}
