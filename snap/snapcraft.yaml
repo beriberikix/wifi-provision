@@ -1,5 +1,5 @@
 name: wifi-provision
-base: core24
+base: core26
 version: "0.1.0"
 title: WiFi Provision
 summary: Captive-portal WiFi onboarding for Ubuntu Core and Server
