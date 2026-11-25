@@ -20,6 +20,8 @@ dependency on NetworkManager makes it unusable on a stock Ubuntu Core image.
 | Ubuntu Server 26.10 (arm64) | Raspberry Pi 4 | binary + apt `hostapd`/`dnsmasq-base` | Full flow from a phone; survives reboot |
 | Ubuntu Server 26.10 (arm64) | Raspberry Pi 4 | strict snap (core24) | Full flow from a phone (fresh device), no AppArmor denials |
 | Ubuntu Core 26 (arm64) | Raspberry Pi 4 | strict snap (core24), CI build | Full flow from a phone (fresh device), no AppArmor denials |
+| Ubuntu Core 26 (arm64) | Raspberry Pi 4 | strict snap (core26), CI build | Full flow from a phone (fresh device), no AppArmor denials |
+| Ubuntu 24.04 (amd64, LXD) | — | strict snap (core26) | Installs and runs (snapd pulls core26 and a newer snapd); no radio |
 
 The Core 26 test used a custom image: Canonical's stock `ubuntu-core-26-pi-arm64`
 model with its own brand and `grade: dangerous`, a seeded system user for headless
