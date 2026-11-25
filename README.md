@@ -1,5 +1,7 @@
 # wifi-provision
 
+[![wifi-provision](https://snapcraft.io/wifi-provision/badge.svg)](https://snapcraft.io/wifi-provision)
+
 Easy WiFi setup for headless Linux devices from your phone or laptop — built for
 **Ubuntu Core and Ubuntu Server**.
 
