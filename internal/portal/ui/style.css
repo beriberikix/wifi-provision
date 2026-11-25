@@ -93,5 +93,5 @@ button#submit:disabled { opacity: 0.6; cursor: default; }
     --muted: #93a4b5;
     --border: #33475b;
   }
-  select, input, #refresh { background: #12202c; color: var(--fg); }
+  select, input, .side-btn { background: #12202c; color: var(--fg); }
 }

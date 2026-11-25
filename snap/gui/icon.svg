@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3d8ff0"/>
+      <stop offset="1" stop-color="#1f5fbf"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- Wi-Fi symbol: three arcs and a dot, centred on (256, 360) -->
+  <g fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round">
+    <path d="M199.4 303.4 A80 80 0 0 1 312.6 303.4"/>
+    <path d="M150 254 A150 150 0 0 1 362 254"/>
+    <path d="M100.4 204.4 A220 220 0 0 1 411.6 204.4"/>
+  </g>
+  <circle cx="256" cy="360" r="32" fill="#fff"/>
+  <!-- "Connected" badge -->
+  <circle cx="400" cy="400" r="78" fill="#1f5fbf"/>
+  <circle cx="400" cy="400" r="62" fill="#e95420"/>
+  <path d="M372 401 l20 20 l38 -40" fill="none" stroke="#fff" stroke-width="18"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
