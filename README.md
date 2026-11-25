@@ -227,13 +227,13 @@ git tag v0.2.0 && git push origin v0.2.0
 
 Promote to `stable` from the store dashboard (Releases tab) or with `snapcraft release`.
 
-The publish job needs a `SNAPCRAFT_STORE_CREDENTIALS` repository secret, limited to this snap. Capture the credential first so a failed export (for example, snapcraft not installed) can't store an empty secret:
+The publish job needs a `SNAPCRAFT_STORE_CREDENTIALS` repository secret, limited to this snap. `export-login` prompts for your Ubuntu One login, so write the credential to a private file rather than a pipe; `&&` makes sure a failed export never stores an empty secret:
 
 ```sh
-creds=$(snapcraft export-login --snaps=wifi-provision --channels=beta \
-  --acls=package_access,package_push,package_update,package_release -) \
-  && printf '%s' "$creds" | gh secret set SNAPCRAFT_STORE_CREDENTIALS
-unset creds
+(umask 077; snapcraft export-login --snaps=wifi-provision --channels=beta \
+  --acls=package_access,package_push,package_update,package_release ~/snap-creds.txt) \
+  && gh secret set SNAPCRAFT_STORE_CREDENTIALS < ~/snap-creds.txt
+rm -f ~/snap-creds.txt
 ```
 
 ## License
