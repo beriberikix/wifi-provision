@@ -1,9 +1,13 @@
 name: snap
 
+# Snap Store channels follow risk levels, and a revision is built once and then
+# promoted (see promote.yml):
+#   push to main   -> edge
+#   push a v* tag  -> beta (plus a GitHub pre-release)
+#   promote.yml    -> candidate, then stable
 on:
   push:
     branches: ['**']
-    # Pushing a v* tag (e.g. v0.2.0) builds and publishes to the Snap Store.
     tags: ['v*']
   pull_request:
   workflow_dispatch:
@@ -34,7 +38,10 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
-      - uses: snapcore/action-build@v1
+        with:
+          # The snap's version comes from `git describe`, which needs tags.
+          fetch-depth: 0
+      - uses: canonical/action-build@v1
         id: snap
       - uses: actions/upload-artifact@v4
         with:
@@ -43,33 +50,62 @@ jobs:
           if-no-files-found: error
 
   publish:
-    # Only for version tags, and only after every architecture has built.
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Only pushes to main or of v* tags in this repository publish.
+    if: >-
+      github.event_name == 'push' &&
+      github.repository == 'beriberikix/wifi-provision' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: build
     runs-on: ubuntu-24.04
+    # Queue rather than overlap, so an older main build can't land on edge
+    # after a newer one.
+    concurrency:
+      group: publish-${{ github.ref }}-${{ matrix.arch }}
     strategy:
       fail-fast: false
       matrix:
         arch: [amd64, arm64]
     steps:
-      - uses: actions/checkout@v4
-      - name: Check the tag matches the snap version
-        run: |
-          version=$(sed -n 's/^version: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' snap/snapcraft.yaml)
-          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::tag $GITHUB_REF_NAME does not match snapcraft.yaml version $version"
-            exit 1
-          fi
       - uses: actions/download-artifact@v4
         with:
           name: wifi-provision-${{ matrix.arch }}
           path: dist
-      - name: Find the snap
-        id: find
-        run: echo "snap=$(ls dist/*.snap)" >> "$GITHUB_OUTPUT"
-      - uses: snapcore/action-publish@v1
+      - name: Pick the channel
+        id: target
+        run: |
+          snap=$(ls dist/*.snap)
+          echo "snap=$snap" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            # The version is derived from the tag; a mismatch means the build
+            # didn't see it (e.g. a shallow clone), so refuse to publish.
+            want="wifi-provision_${GITHUB_REF_NAME#v}_${{ matrix.arch }}.snap"
+            if [ "$(basename "$snap")" != "$want" ]; then
+              echo "::error::built $(basename "$snap"), expected $want"
+              exit 1
+            fi
+            echo "channel=beta" >> "$GITHUB_OUTPUT"
+          else
+            echo "channel=edge" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: canonical/action-publish@v1
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         with:
-          snap: ${{ steps.find.outputs.snap }}
-          release: beta
+          snap: ${{ steps.target.outputs.snap }}
+          release: ${{ steps.target.outputs.channel }}
+
+  github-release:
+    # A pre-release for each tag; promote.yml clears the flag at stable.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Create the pre-release unless it already exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 && exit 0
+          gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --verify-tag \
+            --prerelease --title "${GITHUB_REF_NAME#v}" --generate-notes
