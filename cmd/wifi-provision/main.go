@@ -35,9 +35,10 @@ func main() {
 		cancel()
 		switch {
 		case err != nil:
-			// Can't tell: run the portal. If WiFi was in fact configured, the
-			// activity timeout (or a stop) hands the radio back.
-			log.Printf("checking for existing WiFi config: %v; starting portal", err)
+			// Can't tell. Don't risk taking a working connection down; e.g. in
+			// a snap whose plugs aren't connected yet, netplan can't even run.
+			log.Printf("checking for existing WiFi config: %v; not starting the portal", err)
+			os.Exit(exitError)
 		case provisioned:
 			log.Printf("WiFi already provisioned in netplan; not starting the portal")
 			os.Exit(exitOK)
