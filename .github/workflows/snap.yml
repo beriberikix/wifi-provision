@@ -3,6 +3,8 @@ name: snap
 on:
   push:
     branches: ['**']
+    # Pushing a v* tag (e.g. v0.2.0) builds and publishes to the Snap Store.
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -39,3 +41,35 @@ jobs:
           name: wifi-provision-${{ matrix.arch }}
           path: ${{ steps.snap.outputs.snap }}
           if-no-files-found: error
+
+  publish:
+    # Only for version tags, and only after every architecture has built.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the tag matches the snap version
+        run: |
+          version=$(sed -n 's/^version: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' snap/snapcraft.yaml)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match snapcraft.yaml version $version"
+            exit 1
+          fi
+      - uses: actions/download-artifact@v4
+        with:
+          name: wifi-provision-${{ matrix.arch }}
+          path: dist
+      - name: Find the snap
+        id: find
+        run: echo "snap=$(ls dist/*.snap)" >> "$GITHUB_OUTPUT"
+      - uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ steps.find.outputs.snap }}
+          release: beta

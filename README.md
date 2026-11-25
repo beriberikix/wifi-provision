@@ -216,6 +216,25 @@ image/               headless Ubuntu Core test image (model + system-user templa
 `NetworkBackend` is the seam: the portal depends only on the interface, so tests
 use a fake and an alternate backend (e.g. NetworkManager) could be added later.
 
+## Releasing
+
+Pushing a `v*` tag builds both architectures and publishes them to the Snap Store's `beta` channel. The tag must match `version:` in `snap/snapcraft.yaml`, or the publish job fails.
+
+```sh
+# after bumping version: in snap/snapcraft.yaml and merging to main
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+Promote to `stable` from the store dashboard (Releases tab) or with `snapcraft release`.
+
+The publish job needs a `SNAPCRAFT_STORE_CREDENTIALS` repository secret, limited to this snap:
+
+```sh
+snapcraft export-login --snaps=wifi-provision --channels=beta \
+  --acls=package_access,package_push,package_update,package_release - \
+  | gh secret set SNAPCRAFT_STORE_CREDENTIALS
+```
+
 ## License
 
 Apache License 2.0 — see [LICENSE](LICENSE).
