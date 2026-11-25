@@ -1,11 +1,11 @@
-# wifi-provision
+# Ubuntu Wi-Fi Provisioning
 
 [![wifi-provision](https://snapcraft.io/wifi-provision/badge.svg)](https://snapcraft.io/wifi-provision)
 
-Easy WiFi setup for headless Linux devices from your phone or laptop — built for
+Easy Wi-Fi setup for headless Linux devices from your phone or laptop — built for
 **Ubuntu Core and Ubuntu Server**.
 
-wifi-provision hosts a temporary WiFi access point with a captive portal. Connect
+wifi-provision hosts a temporary Wi-Fi access point with a captive portal. Connect
 to it from a phone, pick your network, enter the password, and the device joins it
 and remembers it across reboots. It targets the networking stack that Core and
 Server share (**netplan → systemd-networkd → wpa_supplicant**) and requires **no
@@ -43,7 +43,7 @@ SSH, and console-conf removed. It contains the stock snaps only, nothing else.
    list from step 1; `POST /connect` submits the chosen credentials.
 4. **Connect** — tears the AP down, writes `/etc/netplan/90-wifi-provision.yaml`,
    and runs `netplan apply`, which joins the network as a client and persists
-   across reboots. Success means a default route *via the WiFi interface* within
+   across reboots. Success means a default route *via the Wi-Fi interface* within
    45s. On failure the drop-in is reverted (so bad credentials aren't kept) and
    the portal comes back for another try.
 
@@ -56,7 +56,7 @@ the radio back to the host's own networking.
 
 | Code | Meaning |
 |---|---|
-| `0` | Connected, skipped because WiFi is already provisioned, or stopped by SIGINT/SIGTERM (e.g. `snap stop`) |
+| `0` | Connected, skipped because Wi-Fi is already provisioned, or stopped by SIGINT/SIGTERM (e.g. `snap stop`) |
 | `1` | Unrecoverable error (e.g. the AP couldn't start, or `--skip-if-provisioned` couldn't read the netplan config) |
 | `2` | Invalid configuration |
 | `3` | `--activity-timeout` passed with no portal activity |
@@ -69,15 +69,15 @@ with `snap set` (next section).
 | Flag | Env | `snap set` key | Default | Purpose |
 |---|---|---|---|---|
 | `--portal-interface`, `-i` | `PORTAL_INTERFACE` | `interface` | auto-detect | Wireless interface |
-| `--portal-ssid`, `-s` | `PORTAL_SSID` | `ssid` | `WiFi Connect` | Portal AP SSID |
+| `--portal-ssid`, `-s` | `PORTAL_SSID` | `ssid` | `Wi-Fi Connect` | Portal AP SSID |
 | `--portal-passphrase`, `-p` | `PORTAL_PASSPHRASE` | `passphrase` | (open) | Portal AP WPA2 passphrase |
 | `--portal-gateway`, `-g` | `PORTAL_GATEWAY` | `gateway` | `192.168.42.1` | AP gateway / bind IP |
 | `--portal-dhcp-range`, `-d` | `PORTAL_DHCP_RANGE` | `dhcp-range` | `192.168.42.2,192.168.42.254` | DHCP range |
 | `--portal-listening-port`, `-o` | `PORTAL_LISTENING_PORT` | `listening-port` | `80` | HTTP port |
 | `--activity-timeout`, `-a` | `ACTIVITY_TIMEOUT` | `activity-timeout` | `0` (off) | Exit if portal unused for N seconds |
-| `--country`, `-c` | `PORTAL_COUNTRY` | `country` | (unset) | WiFi regulatory domain, e.g. `US` |
-| `--skip-if-provisioned` | `PORTAL_SKIP_IF_PROVISIONED` | (always on; see below) | `false` | Exit without touching the radio if netplan already configures a WiFi network |
-| | | `reprovision` | (unset) | `true` runs the portal once even though WiFi is configured |
+| `--country`, `-c` | `PORTAL_COUNTRY` | `country` | (unset) | Wi-Fi regulatory domain, e.g. `US` |
+| `--skip-if-provisioned` | `PORTAL_SKIP_IF_PROVISIONED` | (always on; see below) | `false` | Exit without touching the radio if netplan already configures a Wi-Fi network |
+| | | `reprovision` | (unset) | `true` runs the portal once even though Wi-Fi is configured |
 
 ### Regulatory domain (`--country`)
 
@@ -107,7 +107,7 @@ sudo snap set wifi-provision country=US      # optional; see Configuration
 ```
 
 The service runs at every boot, but only shows the portal on a device with **no
-WiFi configured**. If any netplan file already defines a WiFi network (from
+Wi-Fi configured**. If any netplan file already defines a Wi-Fi network (from
 wifi-provision, cloud-init or Raspberry Pi Imager), it exits at once and leaves
 the radio alone. That checks configuration, not connectivity, so a provisioned
 device whose router is off at boot won't open the portal.
@@ -117,7 +117,7 @@ device whose router is off at boot won't open the portal.
   plugs starts it.
 - **Re-provisioning:** `sudo snap set wifi-provision reprovision=true` restarts
   the service for one run that shows the portal anyway. Later boots skip it
-  again. If that run ends without connecting, the old WiFi config is restored.
+  again. If that run ends without connecting, the old Wi-Fi config is restored.
 - **Restarts:** the service isn't restarted after a deliberate exit (connected,
   skipped, or activity timeout), only after a crash.
 
@@ -164,12 +164,12 @@ assertions and image are written to `image/out/`, which is gitignored.
   key-management lets wpa_supplicant pick SAE and the join never completes, so
   wifi-provision pins `key-management: psk` for any network that offers WPA2.
   WPA3-only networks get `sae`, which this hardware may not be able to join.
-- **Existing WiFi config:** if another netplan file (e.g. cloud-init's
+- **Existing Wi-Fi config:** if another netplan file (e.g. cloud-init's
   `50-cloud-init.yaml`, or Raspberry Pi Imager's settings) already configures
   the same interface, netplan merges it with `90-wifi-provision.yaml` and the
   device will know both networks.
 - **Ethernet:** a wired connection doesn't confuse the success check (it requires
-  a route via the WiFi interface), and keeps SSH up while the AP owns the radio —
+  a route via the Wi-Fi interface), and keeps SSH up while the AP owns the radio —
   the easiest way to develop on real hardware.
 
 ## Build & test (dev machine)

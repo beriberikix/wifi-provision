@@ -185,7 +185,7 @@ func (c *CoreBackend) StopAP(ctx context.Context) error {
 		_ = os.Remove(ap.hostapdConf)
 	}
 	// Drop the portal gateway address; otherwise it lingers on an interface
-	// nothing else manages (e.g. a fresh device with no WiFi netplan config).
+	// nothing else manages (e.g. a fresh device with no Wi-Fi netplan config).
 	_ = run(ctx, "ip", "addr", "flush", "dev", ap.iface)
 	// Give the driver a moment to leave AP mode before a subsequent scan/connect.
 	time.Sleep(1 * time.Second)

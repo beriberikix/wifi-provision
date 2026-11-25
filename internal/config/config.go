@@ -16,7 +16,7 @@ import (
 
 // Defaults mirror the original wifi-connect (src/config.rs).
 const (
-	DefaultSSID            = "WiFi Connect"
+	DefaultSSID            = "Wi-Fi Connect"
 	DefaultGateway         = "192.168.42.1"
 	DefaultDHCPRange       = "192.168.42.2,192.168.42.254"
 	DefaultListeningPort   = 80
@@ -39,7 +39,7 @@ type Config struct {
 	Country string
 
 	// SkipIfProvisioned makes the run exit immediately, without touching the
-	// radio, when netplan already configures a WiFi network. The snap's boot
+	// radio, when netplan already configures a Wi-Fi network. The snap's boot
 	// service sets it so the portal only appears on unprovisioned devices.
 	SkipIfProvisioned bool
 }
@@ -60,8 +60,8 @@ func Load(args []string, getenv func(string) string) (Config, error) {
 		dhcp    = fs.String("portal-dhcp-range", "", fmt.Sprintf("DHCP range (default: %s)", DefaultDHCPRange))
 		port    = fs.String("portal-listening-port", "", fmt.Sprintf("HTTP port (default: %d)", DefaultListeningPort))
 		timeout = fs.String("activity-timeout", "", "exit if portal unused for N seconds (default: 0, disabled)")
-		country = fs.String("country", "", "WiFi regulatory domain, ISO 3166-1 alpha-2 such as US (default: unset)")
-		skip    = fs.Bool("skip-if-provisioned", false, "exit without starting the portal if netplan already configures a WiFi network")
+		country = fs.String("country", "", "Wi-Fi regulatory domain, ISO 3166-1 alpha-2 such as US (default: unset)")
+		skip    = fs.Bool("skip-if-provisioned", false, "exit without starting the portal if netplan already configures a Wi-Fi network")
 	)
 	// Short aliases matching the original tool.
 	fs.StringVar(iface, "i", "", "alias for --portal-interface")

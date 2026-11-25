@@ -27,7 +27,7 @@ reprovision="$(snapctl get reprovision)"
 case "$reprovision" in
 	"" | false) ;;
 	true)
-		# Run the portal now even though WiFi is configured; the launcher
+		# Run the portal now even though Wi-Fi is configured; the launcher
 		# clears the flag so later boots skip the portal again.
 		snapctl restart wifi-provision.wifi-provision
 		;;

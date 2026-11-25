@@ -8,7 +8,7 @@ import (
 )
 
 // WiFiProvisioned reports whether the host's netplan config already defines a
-// WiFi network to join (any `wifis` entry with access points, from any netplan
+// Wi-Fi network to join (any `wifis` entry with access points, from any netplan
 // file: ours, cloud-init's, Raspberry Pi Imager's...). It checks configuration,
 // not connectivity, so a provisioned device whose network is briefly down still
 // counts as provisioned.
