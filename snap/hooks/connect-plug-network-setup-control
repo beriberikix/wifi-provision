@@ -5,7 +5,7 @@
 set -e
 
 this="${0##*/connect-plug-}"
-for plug in network-control network-setup-control firewall-control; do
+for plug in network-control network-setup-control; do
 	[ "$plug" = "$this" ] && continue # being connected now
 	snapctl is-connected "$plug" || exit 0
 done

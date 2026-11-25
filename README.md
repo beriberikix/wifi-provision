@@ -99,10 +99,9 @@ domain in firmware and ignore it either way.
 
 ```sh
 snapcraft pack
-sudo snap install --dangerous ./wifi-provision_0.1.0_*.snap
+sudo snap install --dangerous ./wifi-provision_*.snap
 sudo snap connect wifi-provision:network-control
 sudo snap connect wifi-provision:network-setup-control
-sudo snap connect wifi-provision:firewall-control
 sudo snap set wifi-provision country=US      # optional; see Configuration
 ```
 
@@ -113,8 +112,8 @@ the radio alone. That checks configuration, not connectivity, so a provisioned
 device whose router is off at boot won't open the portal.
 
 - **Plugs:** the service first runs at install time, before the plugs are
-  connected, and exits without doing anything. Connecting the last of the three
-  plugs starts it.
+  connected, and exits without doing anything. It starts once both plugs are
+  connected.
 - **Re-provisioning:** `sudo snap set wifi-provision reprovision=true` restarts
   the service for one run that shows the portal anyway. Later boots skip it
   again. If that run ends without connecting, the old Wi-Fi config is restored.
