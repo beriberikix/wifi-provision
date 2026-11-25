@@ -4,13 +4,30 @@ version: "0.1.0"
 title: Ubuntu Wi-Fi Provisioning
 summary: Captive-portal Wi-Fi onboarding for Ubuntu Core and Server
 description: |
-  wifi-provision hosts a Wi-Fi access point with a captive portal so a phone or
-  laptop can configure a headless device's Wi-Fi. It scans nearby networks via
-  wpa_supplicant, hosts the portal AP with hostapd + dnsmasq (both bundled), and
-  joins the chosen network by writing netplan config and running `netplan apply`.
+  wifi-provision lets you set up Wi-Fi on a headless device from your phone or laptop. When the device has no Wi-Fi configured, it hosts a temporary access point named "Wi-Fi Connect" with a captive portal. Join it, pick your network, enter the password, and the device joins that network and remembers it across reboots.
 
-  Designed for default Ubuntu Core (netplan + systemd-networkd + wpa_supplicant) —
-  no NetworkManager required.
+  It works with the networking stack Ubuntu Core and Server use by default (`netplan` → `systemd-networkd` → `wpa_supplicant`) and does not need NetworkManager. `hostapd` and `dnsmasq` are bundled.
+
+  **How it behaves**
+
+  - Starts at boot. If netplan already has a Wi-Fi network, it exits immediately and leaves the radio alone.
+  - After a successful join it writes the netplan config, runs `netplan apply` and exits.
+  - A failed join restores the previous config, so wrong credentials aren't kept.
+  - If nobody uses the portal within the activity timeout, it exits and leaves the device unprovisioned.
+
+  **Setup**
+
+      sudo snap install wifi-provision
+      sudo snap connect wifi-provision:network-control
+      sudo snap connect wifi-provision:network-setup-control
+      sudo snap connect wifi-provision:firewall-control
+      sudo snap set wifi-provision country=US
+
+  To bring the portal back on a device that is already provisioned:
+
+      sudo snap set wifi-provision reprovision=true
+
+  More options and documentation: https://github.com/beriberikix/wifi-provision
 
 license: Apache-2.0
 contact: Jonathan Beri <jmberi@gmail.com>
