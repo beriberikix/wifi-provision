@@ -1,7 +1,8 @@
 name: wifi-provision
-base: core24
+base: core26
 version: "0.1.0"
-summary: Captive-portal WiFi onboarding for Ubuntu Core
+title: WiFi Provision
+summary: Captive-portal WiFi onboarding for Ubuntu Core and Server
 description: |
   wifi-provision hosts a WiFi access point with a captive portal so a phone or
   laptop can configure a headless device's WiFi. It scans nearby networks via
@@ -10,6 +11,12 @@ description: |
 
   Designed for default Ubuntu Core (netplan + systemd-networkd + wpa_supplicant) —
   no NetworkManager required.
+
+license: Apache-2.0
+contact: Jonathan Beri <jmberi@gmail.com>
+source-code: https://github.com/beriberikix/wifi-provision
+issues: https://github.com/beriberikix/wifi-provision/issues
+website: https://github.com/beriberikix/wifi-provision
 
 grade: stable
 confinement: strict
@@ -20,9 +27,15 @@ platforms:
 
 apps:
   wifi-provision:
-    command: bin/wifi-provision
+    # The launcher maps `snap set` options onto the binary's env vars.
+    command: bin/launch
     daemon: simple
-    install-mode: disable
+    # Runs at every boot; the launcher makes it exit at once (leaving the radio
+    # alone) when netplan already configures a WiFi network.
+    # Single-shot: exits 0 once connected, 3 on activity timeout, 1 on error.
+    # Restart only on abnormal deaths (crash by signal, watchdog), so a
+    # deliberate exit — including the timeout — stays stopped.
+    restart-condition: on-abnormal
     # hostapd/dnsmasq are staged into the snap; expose them on PATH for the binary.
     environment:
       PATH: $SNAP/usr/sbin:$SNAP/sbin:$SNAP/usr/bin:$SNAP/bin:$PATH
@@ -42,6 +55,14 @@ parts:
     organize:
       bin/wifi-provision: bin/wifi-provision
 
+  launcher:
+    plugin: dump
+    source: snap/local
+    organize:
+      launch: bin/launch
+    prime:
+      - bin/launch
+
   # Bundle the AP tooling so the snap works on a stock Core image.
   ap-tools:
     plugin: nil
@@ -49,3 +70,5 @@ parts:
       - hostapd
       - dnsmasq-base
       - iproute2
+    prime:
+      - -usr/lib/*/tc

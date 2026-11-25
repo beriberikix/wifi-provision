@@ -6,6 +6,21 @@
   var identityInput = document.getElementById("identity");
   var passInput = document.getElementById("passphrase");
   var passLabel = document.getElementById("passphrase-label");
+  var passField = document.getElementById("passphrase-field");
+  var togglePass = document.getElementById("toggle-pass");
+
+  // Show/hide the password so it can be checked before submitting — easy to
+  // mistype on a phone keyboard, and a wrong one costs a full connect attempt.
+  function setPassVisible(visible) {
+    passInput.type = visible ? "text" : "password";
+    togglePass.textContent = visible ? "Hide" : "Show";
+    togglePass.setAttribute("aria-pressed", visible ? "true" : "false");
+    togglePass.setAttribute("aria-label", visible ? "Hide password" : "Show password");
+  }
+  togglePass.addEventListener("click", function () {
+    setPassVisible(passInput.type === "password");
+    passInput.focus();
+  });
   var form = document.getElementById("connect-form");
   var submit = document.getElementById("submit");
   var refresh = document.getElementById("refresh");
@@ -33,7 +48,7 @@
     var enterprise = sec === "enterprise";
     var open = sec === "none";
     identityField.hidden = !enterprise;
-    passInput.parentNode.style.display = open ? "none" : "";
+    passField.style.display = open ? "none" : "";
     passLabel.style.display = open ? "none" : "";
   }
 

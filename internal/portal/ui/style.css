@@ -49,17 +49,21 @@ select, input {
 }
 
 .row { display: flex; gap: 0.5rem; }
-.row select { flex: 1; }
+.row select, .row input { flex: 1; min-width: 0; }
 
-#refresh {
+.side-btn {
   flex: 0 0 auto;
-  width: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0 0.6rem;
+  color: var(--fg);
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #fff;
   font-size: 1.2rem;
   cursor: pointer;
 }
+
+#toggle-pass { font-size: 0.9rem; font-weight: 600; }
 
 button#submit {
   width: 100%;

@@ -24,6 +24,10 @@ const (
 type Network struct {
 	SSID     string   `json:"ssid"`
 	Security Security `json:"security"`
+
+	// SAEOnly marks a WPA3-only network (SAE without a PSK fallback). It only
+	// changes the netplan we render, so it is not part of the UI contract.
+	SAEOnly bool `json:"-"`
 }
 
 // Creds are the credentials a user submits via POST /connect. Identity is only
@@ -46,8 +50,10 @@ type APConfig struct {
 // NetworkBackend is the full set of host network operations. The portal only
 // depends on this interface, never on a concrete backend.
 type NetworkBackend interface {
-	// Scan returns the currently visible networks (deduped by SSID, hidden/empty
-	// SSIDs dropped). It must be safe to call while the portal AP is up.
+	// Scan returns the visible networks (deduped by SSID, hidden/empty SSIDs
+	// dropped). It must be safe to call while the portal AP is up; a single radio
+	// cannot scan while hosting an AP, so implementations may return the results
+	// captured just before the AP started.
 	Scan(ctx context.Context) ([]Network, error)
 
 	// StartAP brings up the captive-portal access point and its DHCP/DNS service.
@@ -63,4 +69,13 @@ type NetworkBackend interface {
 	// Connectivity reports whether the device reached the wider network, polling
 	// up to timeout. Used to decide success vs. retry after Connect.
 	Connectivity(ctx context.Context, timeoutSeconds int) (bool, error)
+
+	// RevertConnect undoes the configuration written by the last Connect after
+	// the join failed, so bad credentials are not kept or re-applied.
+	RevertConnect(ctx context.Context) error
+
+	// RestoreNetworking returns the radio to the host's own networking when the
+	// process exits without connecting (timeout, signal, error), undoing anything
+	// StartAP disabled to free the interface.
+	RestoreNetworking(ctx context.Context) error
 }

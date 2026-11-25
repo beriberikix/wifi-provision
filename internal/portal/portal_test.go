@@ -25,6 +25,8 @@ func (f *fakeBackend) StartAP(context.Context, backend.APConfig) error { return 
 func (f *fakeBackend) StopAP(context.Context) error                    { return nil }
 func (f *fakeBackend) Connect(context.Context, backend.Creds) error    { return nil }
 func (f *fakeBackend) Connectivity(context.Context, int) (bool, error) { return true, nil }
+func (f *fakeBackend) RestoreNetworking(context.Context) error         { return nil }
+func (f *fakeBackend) RevertConnect(context.Context) error             { return nil }
 
 func newTestServer(b backend.NetworkBackend, onConnect func(backend.Creds), onActivity func()) *httptest.Server {
 	// Use 127.0.0.1 as the gateway so the captive-portal redirect (which fires when

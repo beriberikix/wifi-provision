@@ -4,3 +4,8 @@
 /parts/
 /prime/
 /stage/
+/image/out/
+*.img
+*.img.xz
+*.assert
+/image/*.model

@@ -31,6 +31,8 @@ func (fakeBackend) Connect(_ context.Context, c backend.Creds) error {
 	return nil
 }
 func (fakeBackend) Connectivity(context.Context, int) (bool, error) { return true, nil }
+func (fakeBackend) RestoreNetworking(context.Context) error         { return nil }
+func (fakeBackend) RevertConnect(context.Context) error             { return nil }
 
 func main() {
 	addr := flag.String("addr", "127.0.0.1:8080", "listen address")
