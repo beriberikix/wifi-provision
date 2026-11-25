@@ -227,12 +227,13 @@ git tag v0.2.0 && git push origin v0.2.0
 
 Promote to `stable` from the store dashboard (Releases tab) or with `snapcraft release`.
 
-The publish job needs a `SNAPCRAFT_STORE_CREDENTIALS` repository secret, limited to this snap:
+The publish job needs a `SNAPCRAFT_STORE_CREDENTIALS` repository secret, limited to this snap. Capture the credential first so a failed export (for example, snapcraft not installed) can't store an empty secret:
 
 ```sh
-snapcraft export-login --snaps=wifi-provision --channels=beta \
-  --acls=package_access,package_push,package_update,package_release - \
-  | gh secret set SNAPCRAFT_STORE_CREDENTIALS
+creds=$(snapcraft export-login --snaps=wifi-provision --channels=beta \
+  --acls=package_access,package_push,package_update,package_release -) \
+  && printf '%s' "$creds" | gh secret set SNAPCRAFT_STORE_CREDENTIALS
+unset creds
 ```
 
 ## License
