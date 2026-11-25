@@ -1,11 +1,11 @@
 name: wifi-provision
 base: core26
 version: "0.1.0"
-title: WiFi Provision
-summary: Captive-portal WiFi onboarding for Ubuntu Core and Server
+title: Ubuntu Wi-Fi Provisioning
+summary: Captive-portal Wi-Fi onboarding for Ubuntu Core and Server
 description: |
-  wifi-provision hosts a WiFi access point with a captive portal so a phone or
-  laptop can configure a headless device's WiFi. It scans nearby networks via
+  wifi-provision hosts a Wi-Fi access point with a captive portal so a phone or
+  laptop can configure a headless device's Wi-Fi. It scans nearby networks via
   wpa_supplicant, hosts the portal AP with hostapd + dnsmasq (both bundled), and
   joins the chosen network by writing netplan config and running `netplan apply`.
 
@@ -31,7 +31,7 @@ apps:
     command: bin/launch
     daemon: simple
     # Runs at every boot; the launcher makes it exit at once (leaving the radio
-    # alone) when netplan already configures a WiFi network.
+    # alone) when netplan already configures a Wi-Fi network.
     # Single-shot: exits 0 once connected, 3 on activity timeout, 1 on error.
     # Restart only on abnormal deaths (crash by signal, watchdog), so a
     # deliberate exit — including the timeout — stays stopped.

@@ -20,7 +20,7 @@ opt listening-port    PORTAL_LISTENING_PORT
 opt activity-timeout  ACTIVITY_TIMEOUT
 opt country           PORTAL_COUNTRY
 
-# Only show the portal on devices with no WiFi configured, so the boot service
+# Only show the portal on devices with no Wi-Fi configured, so the boot service
 # leaves provisioned devices alone. `snap set wifi-provision reprovision=true`
 # (see the configure hook) requests one run that skips this check.
 if [ "$(snapctl get reprovision)" = "true" ]; then

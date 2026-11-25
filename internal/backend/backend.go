@@ -1,5 +1,5 @@
 // Package backend abstracts the network operations wifi-provision needs from the
-// host: scanning for nearby WiFi, hosting the captive-portal access point, and
+// host: scanning for nearby Wi-Fi, hosting the captive-portal access point, and
 // joining a chosen network. The concrete implementation for default Ubuntu Core
 // (wpa_supplicant control socket + hostapd/dnsmasq + netplan) lives alongside this
 // file; the interface is the seam that lets tests use a fake and lets an alternate

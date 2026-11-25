@@ -48,7 +48,7 @@ func (c *CoreBackend) cachedNetworks() []Network {
 
 // liveScan scans through wpa_supplicant. If one is already managing the interface
 // (e.g. netplan's netplan-wpa-<iface>.service) its control socket is used;
-// otherwise — the normal case on a device with no WiFi configured yet — a
+// otherwise — the normal case on a device with no Wi-Fi configured yet — a
 // short-lived private wpa_supplicant is started just for the scan.
 func (c *CoreBackend) liveScan(ctx context.Context) ([]Network, error) {
 	sockPath := filepath.Join(c.wpaCtrlDir, c.iface)

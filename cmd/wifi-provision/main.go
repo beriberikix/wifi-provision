@@ -1,4 +1,4 @@
-// Command wifi-provision hosts a captive-portal WiFi onboarding flow for default
+// Command wifi-provision hosts a captive-portal Wi-Fi onboarding flow for default
 // Ubuntu Core. It brings up an access point, serves a portal that lists nearby
 // networks, and joins the network the user selects (persisting it via netplan).
 //
@@ -37,10 +37,10 @@ func main() {
 		case err != nil:
 			// Can't tell. Don't risk taking a working connection down; e.g. in
 			// a snap whose plugs aren't connected yet, netplan can't even run.
-			log.Printf("checking for existing WiFi config: %v; not starting the portal", err)
+			log.Printf("checking for existing Wi-Fi config: %v; not starting the portal", err)
 			os.Exit(exitError)
 		case provisioned:
-			log.Printf("WiFi already provisioned in netplan; not starting the portal")
+			log.Printf("Wi-Fi already provisioned in netplan; not starting the portal")
 			os.Exit(exitOK)
 		}
 	}
@@ -56,7 +56,7 @@ func main() {
 }
 
 // interfaceWait bounds how long to wait for a wireless interface to appear when
-// auto-detecting. At boot the service can start before the WiFi driver (e.g.
+// auto-detecting. At boot the service can start before the Wi-Fi driver (e.g.
 // brcmfmac on a Pi) has created the interface.
 const interfaceWait = 60 * time.Second
 
@@ -179,7 +179,7 @@ func (a *app) run() int {
 }
 
 // restoreNetworking hands the radio back to the host's own networking after a
-// run that did not connect, so e.g. a device already on WiFi isn't left offline.
+// run that did not connect, so e.g. a device already on Wi-Fi isn't left offline.
 func (a *app) restoreNetworking() {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()

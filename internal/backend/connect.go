@@ -102,7 +102,7 @@ func (c *CoreBackend) Connectivity(ctx context.Context, timeoutSeconds int) (boo
 }
 
 // hasDefaultRoute reports whether there is a default route via iface, i.e. the
-// WiFi interface itself joined a network and got DHCP. It must be scoped to the
+// Wi-Fi interface itself joined a network and got DHCP. It must be scoped to the
 // interface: on a device that is also wired (or has any other uplink) an
 // unscoped check passes immediately, so a wrong password would be reported as
 // success and the portal would never come back for a retry.
