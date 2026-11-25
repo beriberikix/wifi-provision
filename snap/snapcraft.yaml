@@ -1,6 +1,7 @@
 name: wifi-provision
 base: core26
-version: "0.2.1"
+# version is set from git tags by the wifi-provision part (see override-pull).
+adopt-info: wifi-provision
 title: Ubuntu Wi-Fi Provisioning
 summary: Captive-portal Wi-Fi onboarding for Ubuntu Core and Server
 description: |
@@ -67,6 +68,23 @@ parts:
     source: .
     build-snaps:
       - go/1.26/stable
+    build-packages:
+      - git
+    # Version from the nearest v* tag: a tagged commit gives 0.2.1, three
+    # commits later gives 0.2.1+git3.abc1234. CI needs full history (and tags).
+    override-pull: |
+      craftctl default
+      g() { git -c safe.directory='*' -C "$CRAFT_PROJECT_DIR" "$@"; }
+      if desc=$(g describe --tags --match 'v[0-9]*' --long --abbrev=7 2>/dev/null); then
+        tag=${desc%-*-g*}
+        rest=${desc#"$tag"-}
+        n=${rest%%-*}
+        version=${tag#v}
+        [ "$n" = 0 ] || version="$version+git$n.${rest#*-g}"
+      else
+        version="0.0.0+git.$(g rev-parse --short=7 HEAD)"
+      fi
+      craftctl set version="$version"
     organize:
       bin/wifi-provision: bin/wifi-provision
 

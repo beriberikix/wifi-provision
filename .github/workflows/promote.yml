@@ -1,0 +1,55 @@
+name: promote
+
+# Move the revisions already in one channel to the next, lower-risk channel
+# without rebuilding: beta -> candidate, or candidate -> stable. Run it from the
+# Actions tab. Promotion to stable waits for approval through the "stable"
+# environment.
+on:
+  workflow_dispatch:
+    inputs:
+      to:
+        description: Channel to promote to
+        type: choice
+        options: [candidate, stable]
+        required: true
+
+jobs:
+  promote:
+    runs-on: ubuntu-24.04
+    environment: ${{ inputs.to }}
+    permissions:
+      contents: write
+    env:
+      SNAP: wifi-provision
+      TO: ${{ inputs.to }}
+      FROM: ${{ inputs.to == 'stable' && 'candidate' || 'beta' }}
+    steps:
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
+
+      - name: Read the version being promoted
+        id: version
+        run: |
+          version=$(snap info "$SNAP" | awk -v ch="latest/$FROM:" '$1 == ch { print $2 }')
+          case "$version" in
+            "" | "--" | "^") echo "::error::latest/$FROM has nothing to promote"; exit 1 ;;
+          esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Promoting $SNAP $version from latest/$FROM to latest/$TO" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Promote
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        run: snapcraft promote "$SNAP" --from-channel "latest/$FROM" --to-channel "latest/$TO" --yes
+
+      - name: Mark the GitHub release as final
+        if: inputs.to == 'stable'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # Only tagged builds (no +git suffix) have a GitHub release.
+          case "$VERSION" in *+git*) exit 0 ;; esac
+          if gh release view "v$VERSION" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "v$VERSION" -R "$GITHUB_REPOSITORY" --prerelease=false --latest
+          fi

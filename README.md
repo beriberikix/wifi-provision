@@ -217,23 +217,44 @@ use a fake and an alternate backend (e.g. NetworkManager) could be added later.
 
 ## Releasing
 
-Pushing a `v*` tag builds both architectures and publishes them to the Snap Store's `beta` channel. The tag must match `version:` in `snap/snapcraft.yaml`, or the publish job fails.
+Releases follow the Snap Store's risk levels. Each revision is built once by CI
+and then **promoted** to lower-risk channels, so what reaches `stable` is the
+exact binary that was tested on `beta` and `candidate`.
+
+| Channel | How it gets there |
+|---|---|
+| `edge` | Every push to `main` (version like `0.2.1+git3.abc1234`) |
+| `beta` | Pushing a `v*` tag, which also creates a GitHub pre-release |
+| `candidate` | **Actions → promote → Run workflow**, to `candidate` (moves what's on `beta`) |
+| `stable` | **Actions → promote → Run workflow**, to `stable` (moves what's on `candidate`; needs approval, and marks the GitHub release final) |
+
+The snap's version comes from the nearest `v*` tag (`git describe`), so a
+release is just a tag. There is no version to bump:
 
 ```sh
-# after bumping version: in snap/snapcraft.yaml and merging to main
-git tag v0.2.0 && git push origin v0.2.0
+git tag -a v0.3.0 -m "wifi-provision 0.3.0" && git push origin v0.3.0
 ```
 
-Promote to `stable` from the store dashboard (Releases tab) or with `snapcraft release`.
+Promotion moves all architectures at once and never rebuilds.
 
-The publish job needs a `SNAPCRAFT_STORE_CREDENTIALS` repository secret, limited to this snap. `export-login` prompts for your Ubuntu One login, so write the credential to a private file rather than a pipe; `&&` makes sure a failed export never stores an empty secret:
+### One-time setup
 
-```sh
-(umask 077; snapcraft export-login --snaps=wifi-provision --channels=beta \
-  --acls=package_access,package_push,package_update,package_release ~/snap-creds.txt) \
-  && gh secret set SNAPCRAFT_STORE_CREDENTIALS < ~/snap-creds.txt
-rm -f ~/snap-creds.txt
-```
+- **Store credential:** a `SNAPCRAFT_STORE_CREDENTIALS` repository secret,
+  limited to this snap and the channels above. `export-login` prompts for your
+  Ubuntu One login, so write the credential to a private file rather than a
+  pipe; `&&` makes sure a failed export never stores an empty secret:
+
+  ```sh
+  (umask 077; snapcraft export-login --snaps=wifi-provision \
+    --channels=edge,beta,candidate,stable \
+    --acls=package_access,package_push,package_update,package_release ~/snap-creds.txt) \
+    && gh secret set SNAPCRAFT_STORE_CREDENTIALS < ~/snap-creds.txt
+  rm -f ~/snap-creds.txt
+  ```
+
+- **Approval for stable:** a GitHub environment named `stable` with a required
+  reviewer (**Settings → Environments**). The promote workflow waits there until
+  someone approves.
 
 ## License
 
