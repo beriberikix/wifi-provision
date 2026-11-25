@@ -54,8 +54,8 @@ the radio back to the host's own networking.
 
 | Code | Meaning |
 |---|---|
-| `0` | Connected — or stopped by SIGINT/SIGTERM (e.g. `snap stop`) |
-| `1` | Unrecoverable error (e.g. the AP couldn't start) |
+| `0` | Connected, skipped because WiFi is already provisioned, or stopped by SIGINT/SIGTERM (e.g. `snap stop`) |
+| `1` | Unrecoverable error (e.g. the AP couldn't start, or `--skip-if-provisioned` couldn't read the netplan config) |
 | `2` | Invalid configuration |
 | `3` | `--activity-timeout` passed with no portal activity |
 
@@ -74,6 +74,8 @@ with `snap set` (next section).
 | `--portal-listening-port`, `-o` | `PORTAL_LISTENING_PORT` | `listening-port` | `80` | HTTP port |
 | `--activity-timeout`, `-a` | `ACTIVITY_TIMEOUT` | `activity-timeout` | `0` (off) | Exit if portal unused for N seconds |
 | `--country`, `-c` | `PORTAL_COUNTRY` | `country` | (unset) | WiFi regulatory domain, e.g. `US` |
+| `--skip-if-provisioned` | `PORTAL_SKIP_IF_PROVISIONED` | (always on; see below) | `false` | Exit without touching the radio if netplan already configures a WiFi network |
+| | | `reprovision` | (unset) | `true` runs the portal once even though WiFi is configured |
 
 ### Regulatory domain (`--country`)
 
@@ -100,12 +102,24 @@ sudo snap connect wifi-provision:network-control
 sudo snap connect wifi-provision:network-setup-control
 sudo snap connect wifi-provision:firewall-control
 sudo snap set wifi-provision country=US      # optional; see Configuration
-sudo snap start wifi-provision
 ```
 
-The service is installed disabled and runs once per `snap start`. It isn't
-restarted after a deliberate exit (connected, or activity timeout), only after a
-crash. Logs: `sudo snap logs -n 50 wifi-provision`.
+The service runs at every boot, but only shows the portal on a device with **no
+WiFi configured**. If any netplan file already defines a WiFi network (from
+wifi-provision, cloud-init or Raspberry Pi Imager), it exits at once and leaves
+the radio alone. That checks configuration, not connectivity, so a provisioned
+device whose router is off at boot won't open the portal.
+
+- **Plugs:** the service first runs at install time, before the plugs are
+  connected, and exits without doing anything. Connecting the last of the three
+  plugs starts it.
+- **Re-provisioning:** `sudo snap set wifi-provision reprovision=true` restarts
+  the service for one run that shows the portal anyway. Later boots skip it
+  again. If that run ends without connecting, the old WiFi config is restored.
+- **Restarts:** the service isn't restarted after a deliberate exit (connected,
+  skipped, or activity timeout), only after a crash.
+
+Logs: `sudo snap logs -n 50 wifi-provision`.
 
 To build for arm64 (e.g. a Raspberry Pi), build on an arm64 machine; the Pi itself
 works (`sudo snap install snapcraft --classic`, `sudo snap install lxd`,
