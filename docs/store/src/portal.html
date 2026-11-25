@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wi-Fi Setup</title>
+    <!-- The portal's real stylesheet, so the mock matches the shipped UI. -->
+    <link rel="stylesheet" href="../../../internal/portal/ui/style.css" />
+    <style>
+      /* Fake a focused-but-idle native select/inputs for a still image. */
+      select { appearance: auto; }
+      html.dark {
+        --bg: #10171e; --card: #1b2733; --fg: #e7edf3; --muted: #93a4b5; --border: #33475b;
+      }
+      html.dark select, html.dark input, html.dark .side-btn { background: #12202c; color: var(--fg); }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>Connect to Wi-Fi</h1>
+      <p id="intro">Choose a network and enter its password to connect this device.</p>
+      <form autocomplete="off" onsubmit="return false">
+        <label for="ssid">Network</label>
+        <div class="row">
+          <select id="ssid">
+            <option>HomeNetwork 🔒</option>
+            <option>Office-5G 🔒</option>
+            <option>CoffeeShop</option>
+          </select>
+          <button type="button" id="refresh" class="side-btn" title="Rescan">&#x21bb;</button>
+        </div>
+        <label for="passphrase">Password</label>
+        <div class="row">
+          <input id="passphrase" type="password" value="correct-horse-battery" />
+          <button type="button" id="toggle-pass" class="side-btn">Show</button>
+        </div>
+        <button type="submit" id="submit">Connect</button>
+      </form>
+      <p id="status" role="status"></p>
+    </main>
+    <script>
+      var q = new URLSearchParams(location.search);
+      if (q.get("theme") === "dark") document.documentElement.classList.add("dark");
+      if (q.get("state") === "sent") {
+        document.getElementById("submit").disabled = true;
+        var s = document.getElementById("status");
+        s.className = "ok";
+        s.textContent = "Credentials submitted. If the connection succeeds, this portal will close. " +
+          "If it doesn't, rejoin “HomeNetwork” setup and try again.";
+      }
+    </script>
+  </body>
+</html>
