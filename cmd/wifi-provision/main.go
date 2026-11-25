@@ -29,7 +29,22 @@ func main() {
 
 	cfg := config.LoadOrExit()
 
-	b, err := backend.NewCore(backend.Options{Interface: cfg.Interface, Country: cfg.Country})
+	if cfg.SkipIfProvisioned {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		provisioned, err := backend.WiFiProvisioned(ctx)
+		cancel()
+		switch {
+		case err != nil:
+			// Can't tell: run the portal. If WiFi was in fact configured, the
+			// activity timeout (or a stop) hands the radio back.
+			log.Printf("checking for existing WiFi config: %v; starting portal", err)
+		case provisioned:
+			log.Printf("WiFi already provisioned in netplan; not starting the portal")
+			os.Exit(exitOK)
+		}
+	}
+
+	b, err := newBackend(cfg)
 	if err != nil {
 		log.Fatalf("initializing backend: %v", err)
 	}
@@ -37,6 +52,25 @@ func main() {
 
 	app := &app{cfg: cfg, backend: b}
 	os.Exit(app.run())
+}
+
+// interfaceWait bounds how long to wait for a wireless interface to appear when
+// auto-detecting. At boot the service can start before the WiFi driver (e.g.
+// brcmfmac on a Pi) has created the interface.
+const interfaceWait = 60 * time.Second
+
+// newBackend builds the backend, retrying interface auto-detection until
+// interfaceWait passes. An explicitly configured interface is not waited for.
+func newBackend(cfg config.Config) (*backend.CoreBackend, error) {
+	opts := backend.Options{Interface: cfg.Interface, Country: cfg.Country}
+	deadline := time.Now().Add(interfaceWait)
+	for {
+		b, err := backend.NewCore(opts)
+		if err == nil || cfg.Interface != "" || time.Now().After(deadline) {
+			return b, err
+		}
+		time.Sleep(2 * time.Second)
+	}
 }
 
 // app owns the orchestration state shared across the portal callbacks and the

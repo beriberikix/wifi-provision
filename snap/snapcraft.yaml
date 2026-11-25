@@ -30,7 +30,8 @@ apps:
     # The launcher maps `snap set` options onto the binary's env vars.
     command: bin/launch
     daemon: simple
-    install-mode: disable
+    # Runs at every boot; the launcher makes it exit at once (leaving the radio
+    # alone) when netplan already configures a WiFi network.
     # Single-shot: exits 0 once connected, 3 on activity timeout, 1 on error.
     # Restart only on abnormal deaths (crash by signal, watchdog), so a
     # deliberate exit — including the timeout — stays stopped.

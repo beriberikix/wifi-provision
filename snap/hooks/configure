@@ -22,3 +22,17 @@ if [ -n "$passphrase" ] && { [ "${#passphrase}" -lt 8 ] || [ "${#passphrase}" -g
 	echo "passphrase must be 8-63 characters for WPA2 (or unset for an open portal)" >&2
 	exit 1
 fi
+
+reprovision="$(snapctl get reprovision)"
+case "$reprovision" in
+	"" | false) ;;
+	true)
+		# Run the portal now even though WiFi is configured; the launcher
+		# clears the flag so later boots skip the portal again.
+		snapctl restart wifi-provision.wifi-provision
+		;;
+	*)
+		echo "reprovision must be true or false (got \"$reprovision\")" >&2
+		exit 1
+		;;
+esac

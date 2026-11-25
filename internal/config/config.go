@@ -37,6 +37,11 @@ type Config struct {
 	// leaves the radio's current domain alone. It is advertised by the portal AP
 	// and written to netplan, which passes it to wpa_supplicant as country=.
 	Country string
+
+	// SkipIfProvisioned makes the run exit immediately, without touching the
+	// radio, when netplan already configures a WiFi network. The snap's boot
+	// service sets it so the portal only appears on unprovisioned devices.
+	SkipIfProvisioned bool
 }
 
 // Load resolves configuration from the given args (excluding the program name)
@@ -56,6 +61,7 @@ func Load(args []string, getenv func(string) string) (Config, error) {
 		port    = fs.String("portal-listening-port", "", fmt.Sprintf("HTTP port (default: %d)", DefaultListeningPort))
 		timeout = fs.String("activity-timeout", "", "exit if portal unused for N seconds (default: 0, disabled)")
 		country = fs.String("country", "", "WiFi regulatory domain, ISO 3166-1 alpha-2 such as US (default: unset)")
+		skip    = fs.Bool("skip-if-provisioned", false, "exit without starting the portal if netplan already configures a WiFi network")
 	)
 	// Short aliases matching the original tool.
 	fs.StringVar(iface, "i", "", "alias for --portal-interface")
@@ -91,6 +97,21 @@ func Load(args []string, getenv func(string) string) (Config, error) {
 	}
 	if cfg.Country != "" && !isCountryCode(cfg.Country) {
 		return Config{}, fmt.Errorf("invalid country %q (want a two-letter ISO 3166-1 code such as US)", cfg.Country)
+	}
+
+	// Booleans: an explicitly passed flag wins, then the env var, then false.
+	flagSet := map[string]bool{}
+	fs.Visit(func(f *flag.Flag) { flagSet[f.Name] = true })
+	switch {
+	case flagSet["skip-if-provisioned"]:
+		cfg.SkipIfProvisioned = *skip
+	case getenv("PORTAL_SKIP_IF_PROVISIONED") != "":
+		v := getenv("PORTAL_SKIP_IF_PROVISIONED")
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid PORTAL_SKIP_IF_PROVISIONED %q (want true or false)", v)
+		}
+		cfg.SkipIfProvisioned = b
 	}
 
 	portStr := pick(*port, "PORTAL_LISTENING_PORT", strconv.Itoa(DefaultListeningPort))
